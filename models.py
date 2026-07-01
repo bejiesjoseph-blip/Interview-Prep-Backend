@@ -14,6 +14,39 @@ def create_tables():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS resumes(
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT,
+        filename VARCHAR(255),
+        resume_text LONGTEXT,
+        structured_json LONGTEXT,
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS interview_sessions(
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT,
+        difficulty VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS questions(
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        session_id INT,
+        question TEXT,
+        difficulty VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(session_id) REFERENCES interview_sessions(id)
+    )
+    """)
+
 
 
 create_tables()
@@ -67,6 +100,45 @@ def login_user(email, password):
         return user
 
     return None
+
+#save resume
+
+from config import db, cursor
+import json
+
+def save_resume(user_id, filename, resume_text, structured_json):
+
+    cursor.execute("""
+    INSERT INTO resumes(
+        user_id,
+        filename,
+        resume_text,
+        structured_json
+    )
+    VALUES(%s, %s, %s, %s)
+    """, (
+        user_id,
+        filename,
+        resume_text,
+        structured_json
+    ))
+
+    db.commit()
+
+#Get Resume
+def get_latest_resume(user_id):
+
+    cursor.execute("""
+    SELECT *
+    FROM resumes
+    WHERE user_id=%s
+    ORDER BY id DESC
+    LIMIT 1
+    """, (user_id,))
+
+    resume = cursor.fetchone()
+
+    return resume
 
 
 

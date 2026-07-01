@@ -82,3 +82,95 @@ def login():
         "token": token
     })
 
+# PDF TEXT EXTRACTION
+
+def extract_text(pdf_path):
+
+    text = ""
+
+    with pdfplumber.open(pdf_path) as pdf:
+
+        for page in pdf.pages:
+
+            page_text = page.extract_text()
+
+            if page_text:
+                text += page_text + "\n"
+
+    return text
+
+# UPLOAD RESUME
+
+@app.route("/upload-resume", methods=["POST"])
+@jwt_required()
+def upload_resume():
+
+    user_id = int(get_jwt_identity())
+
+    if "file" not in request.files:
+        return jsonify({"error": "PDF file required"}), 400
+
+    file = request.files["file"]
+
+    filename = secure_filename(file.filename)
+
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+
+    file.save(filepath)
+
+    resume_text = extract_text(filepath)
+
+    prompt = f"""
+Extract the resume.
+
+Return ONLY a JSON object.
+
+Do NOT use markdown.
+
+Do NOT use ```.
+
+Schema:
+
+{{
+    "name":"",
+    "skills":[],
+    "projects":[],
+    "experience":[],
+    "education":[]
+}}
+
+Resume:
+
+{resume_text}
+"""
+    import re
+
+    response = gemini_model.generate_content(prompt)
+   
+
+    structured_resume = response.text.strip()
+
+    structured_resume = re.sub(r"^```json\s*", "", structured_resume)
+    structured_resume = re.sub(r"^```\s*", "", structured_resume)
+    structured_resume = re.sub(r"\s*```$", "", structured_resume)
+
+    print("Cleaned Json:")
+    print(structured_resume)
+
+
+    
+    resume_json = json.loads(structured_resume)
+
+    save_resume(
+        user_id=user_id,
+        filename=filename,
+        resume_text=resume_text,
+        structured_json=structured_resume
+    )
+
+    return jsonify({
+        "message": "Resume Uploaded Successfully",
+        "resume": resume_json
+    })
+
+
