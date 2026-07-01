@@ -49,4 +49,25 @@ def register_user(name, email, password):
         "message": "User registered successfully"
     }
 
+#Login User
+
+def login_user(email, password):
+
+    cursor.execute(
+        "SELECT * FROM users WHERE email=%s",
+        (email,)
+    )
+
+    user = cursor.fetchone()
+
+    if not user:
+        return None
+
+    if check_password_hash(user["password"], password):
+        return user
+
+    return None
+
+
+
     

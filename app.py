@@ -59,3 +59,26 @@ def register():
     result = register_user(name, email, password)
 
     return jsonify(result)
+
+# LOGIN
+
+@app.route("/login", methods=["POST"])
+def login():
+
+    data = request.get_json()
+
+    email = data.get("email")
+    password = data.get("password")
+
+    user = login_user(email, password)
+
+    if not user:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    token = create_access_token(identity=str(user["id"]))
+
+    return jsonify({
+        "message": "Login Successful",
+        "token": token
+    })
+
