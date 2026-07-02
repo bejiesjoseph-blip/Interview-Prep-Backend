@@ -126,6 +126,7 @@ def save_resume(user_id, filename, resume_text, structured_json):
     db.commit()
 
 #Get Resume
+
 def get_latest_resume(user_id):
 
     cursor.execute("""
@@ -141,5 +142,45 @@ def get_latest_resume(user_id):
     return resume
 
 
+#Create Interview Session
+
+def create_interview_session(user_id, difficulty):
+
+    cursor.execute("""
+    INSERT INTO interview_sessions(
+        user_id,
+        difficulty
+    )
+    VALUES(%s, %s)
+    """, (
+        user_id,
+        difficulty
+    ))
+
+    db.commit()
+
+    return cursor.lastrowid
+
+#Save Questions
+
+from config import db, cursor
+def save_questions(session_id, questions, difficulty):
+
+    for question in questions:
+
+        cursor.execute("""
+        INSERT INTO questions(
+            session_id,
+            question,
+            difficulty
+        )
+        VALUES(%s, %s, %s)
+        """, (
+            session_id,
+            question,
+            difficulty
+        ))
+
+    db.commit()
 
     

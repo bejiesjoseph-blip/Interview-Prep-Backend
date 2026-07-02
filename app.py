@@ -173,4 +173,96 @@ Resume:
         "resume": resume_json
     })
 
+#GENERATE QUESTIONS
+
+@app.route("/generate-questions", methods=["POST"])
+@jwt_required()
+def generate_questions():
+
+    user_id = int(get_jwt_identity())
+    req_data = request.get_json()
+
+    difficulty = req_data.get("difficulty", "medium").lower()
+
+    if difficulty not in ["easy", "medium", "hard"]:
+        return jsonify({
+            "error": "Difficulty must be easy, medium, or hard"
+        }), 400
+
+    resume = get_latest_resume(user_id)
+
+    if not resume:
+        return jsonify({
+            "error": "Upload resume first"
+        }), 404
+
+    prompt = f"""
+You are an expert technical interviewer.
+
+Generate exactly 10 {difficulty} interview questions based on the candidate's resume.
+
+Rules:
+- Return ONLY valid JSON
+- No markdown
+- No explanations
+
+Format:
+{{
+  "difficulty": "{difficulty}",
+  "questions": ["Q1", "Q2", "Q3"]
+}}
+
+Resume:
+{resume["structured_json"]}
+"""
+
+    response = None
+
+    try:
+        response = gemini_model.generate_content(prompt)
+        raw_text = response.text.strip()
+
+        print("=" * 50)
+        print("Gemini Response:")
+        print(raw_text)
+        print("=" * 50)
+
+        # Clean possible markdown fences
+        cleaned = (
+            raw_text
+            .replace("```json", "")
+            .replace("```", "")
+            .strip()
+        )
+
+        parsed = json.loads(cleaned)
+
+        if not isinstance(parsed, dict):
+            raise ValueError("Response is not a JSON object")
+
+        if "questions" not in parsed or not isinstance(parsed["questions"], list):
+            raise ValueError("Missing or invalid 'questions' field")
+
+        questions = parsed["questions"]
+
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to generate interview questions",
+            "details": str(e),
+            "gemini_output": response.text if response else ""
+        }), 500
+
+    session_id = create_interview_session(user_id, difficulty)
+
+    save_questions(
+        session_id,
+        questions,
+        difficulty
+    )
+
+    return jsonify({
+        "message": "Questions Generated Successfully",
+        "difficulty": difficulty,
+        "questions": questions
+    })
 
