@@ -266,3 +266,18 @@ Resume:
         "questions": questions
     })
 
+#HISTORY
+
+@app.route("/history", methods=["GET"])
+@jwt_required()
+def history():
+
+    user_id = int(get_jwt_identity())
+
+    return jsonify(
+        get_history(user_id)
+    )
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

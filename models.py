@@ -183,4 +183,40 @@ def save_questions(session_id, questions, difficulty):
 
     db.commit()
 
+
+#Historyy
+
+def get_history(user_id):
+
+    # Get all interview sessions for user
+    cursor.execute("""
+    SELECT *
+    FROM interview_sessions
+    WHERE user_id=%s
+    ORDER BY id DESC
+    """, (user_id,))
+
+    sessions = cursor.fetchall()
+
+    history = []
+
+    for session in sessions:
+
+        # Get questions for each session
+        cursor.execute("""
+        SELECT question, difficulty
+        FROM questions
+        WHERE session_id=%s
+        """, (session["id"],))
+
+        questions = cursor.fetchall()
+
+        history.append({
+            "session_id": session["id"],
+            "difficulty": session["difficulty"],
+            "created_at": str(session["created_at"]),
+            "questions": questions
+        })
+
+    return history
     
